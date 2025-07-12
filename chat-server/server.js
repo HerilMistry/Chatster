@@ -1,25 +1,29 @@
+const express = require("express");
 const WebSocket = require("ws");
+const http = require("http");
 
-const wss = new WebSocket.Server({port: 8080});
-const clients = new Set();
+const app = express();
+const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
-wss.on("connection",(ws)=>{
-    clients.add(ws);
-    console.log("New client connected. Total:",clients.size);
-
-    ws.on("message", (msg)=>{
-        for(let client of clients){
-            if(client !== ws && client.readyState === WebSocket.OPEN){
-                client.send(msg);
-            }
-        }
+// Basic WebSocket logic
+wss.on("connection", (ws) => {
+  console.log("New client connected");
+  ws.on("message", (msg) => {
+    console.log("Received:", msg);
+    wss.clients.forEach((client) => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(msg);
+      }
     });
-
-    ws.on("close", ()=>{
-            clients.delete(ws);
-            console.log("client disconnected : total ",clients.size);
-    });
+  });
 });
 
+app.get("/", (req, res) => {
+  res.send("WebSocket server is running!");
+});
 
-console.log("🔌 WebSocket server running on ws://localhost:8080");
+server.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
